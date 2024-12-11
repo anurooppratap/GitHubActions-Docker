@@ -1,56 +1,70 @@
+# The name of the GitHub Actions workflow
 name: CI/CD for Dockerized Flask App
 
+# Define the events that trigger the workflow
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  push:                     # Trigger workflow when changes are pushed
+    branches: [main]        # Specify the branch to monitor (main branch)
+  pull_request:             # Trigger workflow on pull requests
+    branches: [main]        # Specify the branch for pull requests (main branch)
 
+# Define the jobs in the workflow
 jobs:
+  # First job: Build and test the application
   build-and-test:
-    runs-on: ubuntu-latest
-    steps:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu image for the job environment
+    steps:                  # Define the steps in this job
+      # Step 1: Checkout the repository code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3  # GitHub action to clone the repo into the runner
 
+      # Step 2: Set up Python environment
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4  # GitHub action to set up a Python environment
         with:
-          python-version: '3.9'
-      
+          python-version: '3.9'       # Specify Python version (3.9)
+
+      # Step 3: Install dependencies required for the application
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flask
-          pip install pytest
-      
+        run: |                        # Use a multi-line command to install dependencies
+          python -m pip install --upgrade pip  # Upgrade pip to the latest version
+          pip install flask           # Install Flask (web framework)
+          pip install pytest          # Install Pytest (testing framework)
+
+      # Step 4: Run unit tests
       - name: Run tests
-        run: |
-          pytest
+        run: |                        # Use a multi-line command to execute tests
+          pytest                      # Run all test cases in the project
 
+  # Second job: Build and publish the Docker image
   build-and-publish:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
+    needs: build-and-test            # This job depends on the successful completion of build-and-test
+    runs-on: ubuntu-latest           # Use the latest Ubuntu image for this job
+    steps:                           # Define the steps in this job
+      # Step 1: Checkout the repository code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3    # GitHub action to clone the repo into the runner
 
+      # Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v2  # Action to set up Docker Buildx, enabling advanced build options
 
+      # Step 3: Login to Dockerhub
       - name: Login to Dockerhub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v2  # Action to log into Dockerhub
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}  # Use a secret for Dockerhub username
+          password: ${{ secrets.DOCKER_PASSWORD }}  # Use a secret for Dockerhub password
 
+      # Step 4: Build and push the Docker image
       - name: Build and push docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v4  # Action to build and push Docker images
         with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/flasktest-app:latest
+          context: .                       # The context directory for the Docker build (current directory)
+          file: ./Dockerfile               # Path to the Dockerfile
+          push: true                       # Push the image to a registry
+          tags: ${{ secrets.DOCKER_USERNAME }}/flasktest-app:latest  # Tag the image with the username/repo:tag format
 
+      # Step 5: Output the image digest
       - name: Image digest
-        run: echo ${{ steps.build-and-publish.outputs.digest }}
+        run: echo ${{ steps.build-and-publish.outputs.digest }}  # Print the image digest to the console
